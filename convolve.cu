@@ -206,11 +206,6 @@ int main(int argc, char *argv[])
     std::cout << "Deployed to GPU" << std::endl;
     ApplyBlur<<<ny, nx>>>(cuImg, cuOut, cuKernel, nx, ny, kernelWidth);
 
-    // Synchronize all threads in order to ensure they are all finished running
-    cudaDeviceSynchronize();
-    cudaError_t fromGPU = cudaMemcpy(imgOut, cuOut, n*sizeof(Pixel), cudaMemcpyDeviceToHost);
-    std::cout << cudaGetErrorName(fromGPU) << " | " << cudaGetErrorString(fromGPU) << std::endl;
-
     // Read file header in to save in the new file
     uint8_t *fileHeader = (uint8_t *)malloc(offset);
     fseek(fptr, 0, SEEK_SET);
@@ -220,6 +215,13 @@ int main(int argc, char *argv[])
     FILE *wptr;
     wptr = fopen("blurred.bmp", "w+");
     fwrite(fileHeader, offset, 1, wptr);
+    
+    // Synchronize all threads in order to ensure they are all finished running
+    cudaDeviceSynchronize();
+    cudaError_t fromGPU = cudaMemcpy(imgOut, cuOut, n*sizeof(Pixel), cudaMemcpyDeviceToHost);
+    std::cout << cudaGetErrorName(fromGPU) << " | " << cudaGetErrorString(fromGPU) << std::endl;
+
+    // Write pixel data
     fwrite(imgOut, sizeof(Pixel), n, wptr);
 
     // Deallocate all memory and close file streams
